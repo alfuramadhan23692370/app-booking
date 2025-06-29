@@ -1,0 +1,33 @@
+/* css/style.css - CSS Dasar Global */
+
+/* Contoh: Styling untuk semua tombol */
+.btn {
+    display: inline-block;
+    padding: 10px 20px;
+    font-size: 1em;
+    font-weight: 600;
+    text-align: center;
+    text-decoration: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+/* Jika Anda ingin memindahkan :root variabel dari HTML, letakkan di sini */
+/* Contoh: */
+/*
+:root {
+    --primary-color: #3498db;
+    --secondary-color: #2ecc71;
+    --dark-bg: #2c3e50;
+    --light-bg: #ecf0f1;
+    --card-bg: #ffffff;
+    --text-color: #34495e;
+    --heading-color: #2c3e50;
+    --border-color: #ddd;
+    --shadow-light: rgba(0, 0, 0, 0.08);
+    --shadow-medium: rgba(0, 0, 0, 0.15);
+}
+*/
+
+/* Anda bisa tambahkan lebih banyak CSS di sini */
