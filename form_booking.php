@@ -1,110 +1,127 @@
 <?php
-$conn = new mysqli("localhost", "root", "", "booking_app_db");
-if ($conn->connect_error) {
-    die("Koneksi gagal: " . $conn->connect_error);
+include 'koneksi.php';
+
+function generateBangku($conn) {
+    $result = mysqli_query($conn, "SELECT MAX(CAST(no_bangku AS UNSIGNED)) as max FROM pemesanan");
+    $row = mysqli_fetch_assoc($result);
+    $next = $row['max'] ? $row['max'] + 1 : 1;
+    return $next;
 }
-$schedules = $conn->query("SELECT id, item_name, origin_location, destination_location, departure_time, price FROM schedules WHERE status='active' ORDER BY departure_time ASC");
+
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    $nama = $_POST['nama_penumpang'];
+    $alamat = $_POST['alamat'];
+    $asal = $_POST['pelabuhan_asal'];
+    $tujuan = $_POST['tujuan'];
+    $tgl_berangkat = $_POST['tanggal_berangkat'];
+    $jam_berangkat = $_POST['jam_berangkat'];
+    $tgl_tiba = $_POST['tanggal_tiba'];
+    $jam_tiba = $_POST['jam_tiba'];
+
+    $no_bangku = generateBangku($conn); // ← Otomatis
+
+    $insert = mysqli_query($conn, "INSERT INTO pemesanan 
+        (nama_penumpang, no_bangku, alamat, pelabuhan_asal, tujuan, tanggal_berangkat, jam_berangkat, tanggal_tiba, jam_tiba)
+        VALUES ('$nama', '$no_bangku', '$alamat', '$asal', '$tujuan', '$tgl_berangkat', '$jam_berangkat', '$tgl_tiba', '$jam_tiba')
+    ");
+
+    if ($insert) {
+        $id = mysqli_insert_id($conn);
+        header("Location: admin/cetak.php?id=$id");
+        exit;
+    } else {
+        echo "Gagal menyimpan data.";
+    }
+}
 ?>
+
 <!DOCTYPE html>
-<html lang="id">
+<html>
 <head>
     <meta charset="UTF-8">
-    <title>Booking Tiket Online</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    <title>Form Pemesanan Tiket Kapal</title>
     <style>
-        body, html {
-            height: 100%;
-            margin: 0;
+        body {
             font-family: 'Segoe UI', sans-serif;
-            background: url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1950&q=80') no-repeat center center fixed;
+            background: url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e') no-repeat center center fixed;
             background-size: cover;
+            margin: 0;
+            padding: 0;
         }
-        .container-custom {
-            max-width: 1100px;
-            margin: 50px auto;
-            background-color: rgba(255, 255, 255, 0.92);
-            padding: 50px;
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        .container {
+            max-width: 600px;
+            margin: 60px auto;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
         }
-        .form-title {
+        h2 {
             text-align: center;
-            font-size: 40px;
+            color: #007bff;
+            margin-bottom: 25px;
+        }
+        label {
+            display: block;
+            margin-top: 12px;
             font-weight: bold;
-            color: #0d6efd;
-            margin-bottom: 40px;
         }
-        .form-label {
-            font-weight: 600;
-            color: #222;
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            margin-top: 6px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            background-color: #f9f9f9;
         }
-        .form-control, .form-select {
-            border-radius: 12px;
-            padding: 14px;
-            font-size: 16px;
-        }
-        .btn-book {
-            background-color: #0d6efd;
+        button {
+            margin-top: 25px;
+            width: 100%;
+            padding: 12px;
+            background-color: #007bff;
+            border: none;
             color: white;
-            border-radius: 12px;
-            padding: 14px 0;
-            font-size: 18px;
-            font-weight: 600;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
         }
-        .btn-book:hover {
-            background-color: #0a58ca;
-        }
-        .bi {
-            margin-right: 8px;
+        button:hover {
+            background-color: #0056b3;
         }
     </style>
 </head>
 <body>
-<div class="container container-custom">
-    <div class="form-title"><i class="bi bi-ticket-perforated"></i> Form Pemesanan Tiket Kapal</div>
-    <form action="booking.php" method="POST">
-        <div class="row g-4">
-            <div class="col-md-12">
-                <label class="form-label">Pilih Jadwal</label>
-                <select name="schedule_id" class="form-select" required>
-                    <option value="">-- Pilih Jadwal --</option>
-                    <?php while($row = $schedules->fetch_assoc()): ?>
-                        <option value="<?= $row['id']; ?>">
-                            <?= $row['item_name']; ?> | <?= $row['origin_location']; ?> → <?= $row['destination_location']; ?> | <?= date('d M Y H:i', strtotime($row['departure_time'])) ?> | Rp<?= number_format($row['price'], 0, ',', '.') ?>
-                        </option>
-                    <?php endwhile; ?>
-                </select>
-            </div>
-            <div class="col-md-6">
-                <label class="form-label">Nama Pemesan</label>
-                <input type="text" name="nama_pemesan" class="form-control" placeholder="Nama lengkap" required>
-            </div>
-            <div class="col-md-6">
-                <label class="form-label">Email</label>
-                <input type="email" name="email" class="form-control" placeholder="email@example.com" required>
-            </div>
-            <div class="col-md-6">
-                <label class="form-label">Nomor HP</label>
-                <input type="text" name="no_hp" class="form-control" placeholder="08xxxxxxxxxx" required>
-            </div>
-            <div class="col-md-6">
-                <label class="form-label">Tanggal Pemesanan</label>
-                <input type="date" name="tanggal" class="form-control" min="<?= date('Y-m-d'); ?>" required>
-            </div>
-            <div class="col-md-6">
-                <label class="form-label">Jumlah Tiket</label>
-                <input type="number" name="num_tickets" class="form-control" min="1" value="1" required>
-            </div>
-            <div class="col-12">
-                <button type="submit" class="btn btn-book w-100">
-                    <i class="bi bi-send-check"></i> Pesan Tiket Sekarang
-                </button>
-            </div>
-        </div>
+
+<div class="container">
+    <h2>Form Pemesanan Tiket Kapal</h2>
+    <form method="POST">
+        <label>Nama Penumpang:</label>
+        <input type="text" name="nama_penumpang" required>
+
+        <label>Alamat:</label>
+        <textarea name="alamat" rows="3" required></textarea>
+
+        <label>Pelabuhan Asal:</label>
+        <input type="text" name="pelabuhan_asal" required>
+
+        <label>Tujuan:</label>
+        <input type="text" name="tujuan" required>
+
+        <label>Tanggal Berangkat:</label>
+        <input type="date" name="tanggal_berangkat" required>
+
+        <label>Jam Berangkat:</label>
+        <input type="time" name="jam_berangkat" required>
+
+        <label>Tanggal Tiba:</label>
+        <input type="date" name="tanggal_tiba" required>
+
+        <label>Jam Tiba:</label>
+        <input type="time" name="jam_tiba" required>
+
+        <button type="submit">Simpan & Cetak Tiket</button>
     </form>
 </div>
+
 </body>
 </html>
-<?php $conn->close(); ?>

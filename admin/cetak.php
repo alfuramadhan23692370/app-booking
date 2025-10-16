@@ -1,93 +1,165 @@
 <?php
-$conn = new mysqli("localhost", "root", "", "booking_app_db");
-if ($conn->connect_error) {
-    die("Koneksi gagal: " . $conn->connect_error);
+include '../koneksi.php';
+
+if (!isset($_GET['id'])) {
+    echo "ID tiket tidak ditemukan.";
+    exit;
 }
 
-$id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
-$result = $conn->query("
-    SELECT b.*, s.item_name, s.item_type, s.origin_location, s.destination_location, s.departure_time 
-    FROM bookings b 
-    JOIN schedules s ON b.schedule_id = s.id 
-    WHERE b.id = $id
-");
+$id = (int)$_GET['id'];
+$result = mysqli_query($conn, "SELECT * FROM pemesanan WHERE id = $id");
 
-if ($result->num_rows === 0) {
-    die("❌ Data tidak ditemukan.");
+if (!$result || mysqli_num_rows($result) == 0) {
+    echo "Data tiket tidak ditemukan.";
+    exit;
 }
 
-$data = $result->fetch_assoc();
-
-// Nomor bangku (acak antara 1–200, bisa disesuaikan dengan kebutuhan)
-$no_bangku = rand(1, 200);
+$tiket = mysqli_fetch_assoc($result);
 ?>
+
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Cetak Tiket</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>E-Tiket Kapal - <?= $tiket['nama_penumpang'] ?></title>
     <style>
-        body { background: #f5faff; font-family: 'Segoe UI', sans-serif; padding: 30px; }
-        .ticket-box {
-            background: white;
-            border-radius: 10px;
-            padding: 30px;
-            max-width: 700px;
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #eef2f3;
+            margin: 0;
+            padding: 40px;
+        }
+
+        .eticket {
+            max-width: 750px;
             margin: auto;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            background: #fff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
         }
-        .ticket-box h2 {
-            color: #0d6efd;
-        }
-        .ticket-info {
-            margin-bottom: 15px;
-        }
-        .label { font-weight: bold; color: #444; }
-        .value { font-size: 1.1em; }
-        .print-btn {
-            margin-top: 30px;
+
+        .eticket-header {
+            background-color: #023e8a;
+            color: white;
+            padding: 25px;
             text-align: center;
         }
+
+        .eticket-header h2 {
+            margin: 0;
+            font-size: 26px;
+            letter-spacing: 1px;
+        }
+
+        .eticket-body {
+            padding: 30px 40px;
+        }
+
+        .row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+
+        .label {
+            font-weight: bold;
+            color: #555;
+            width: 160px;
+        }
+
+        .value {
+            color: #000;
+            flex: 1;
+        }
+
+        .qr-code {
+            text-align: center;
+            margin-top: 30px;
+        }
+
+        .qr-code img {
+            width: 130px;
+        }
+
+        .footer {
+            background: #f1f1f1;
+            text-align: center;
+            padding: 12px;
+            font-size: 13px;
+            color: #333;
+        }
+
+        .print-btn {
+            text-align: center;
+            margin-top: 25px;
+        }
+
+        .print-btn button {
+            padding: 10px 18px;
+            background-color: #0077b6;
+            color: white;
+            border: none;
+            font-size: 15px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
         @media print {
-            .print-btn { display: none; }
+            .print-btn {
+                display: none;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="ticket-box">
-        <h2 class="text-center">🎫 Tiket Pemesanan</h2>
-        <hr>
-        <div class="ticket-info">
-            <div class="label">Nama Pemesan:</div>
-            <div class="value"><?= htmlspecialchars($data['nama_pemesan']) ?></div>
+
+<div class="eticket">
+    <div class="eticket-header">
+        <h2>E-TIKET PENUMPANG KAPAL</h2>
+        <small><?= strtoupper($tiket['pelabuhan_asal']) ?> → <?= strtoupper($tiket['tujuan']) ?></small>
+    </div>
+
+    <div class="eticket-body">
+        <div class="row">
+            <div class="label">ID Tiket</div>
+            <div class="value"><?= $tiket['id'] ?></div>
         </div>
-        <div class="ticket-info">
-            <div class="label">Rute:</div>
-            <div class="value"><?= $data['origin_location'] ?> → <?= $data['destination_location'] ?></div>
+        <div class="row">
+            <div class="label">Nama</div>
+            <div class="value"><?= htmlspecialchars($tiket['nama_penumpang']) ?></div>
         </div>
-        <div class="ticket-info">
-            <div class="label">Tanggal Berangkat:</div>
-            <div class="value"><?= date('d M Y, H:i', strtotime($data['departure_time'])) ?></div>
+        <div class="row">
+            <div class="label"> Alamat</div>
+            <div class="value"><?= htmlspecialchars($tiket['alamat']) ?></div>
         </div>
-        <div class="ticket-info">
-            <div class="label">Jumlah Tiket:</div>
-            <div class="value"><?= $data['num_tickets'] ?> orang</div>
+        <div class="row">
+            <div class="label">No Bangku</div>
+            <div class="value"><?= $tiket['no_bangku'] ?></div>
         </div>
-        <div class="ticket-info">
-            <div class="label">Total Bayar:</div>
-            <div class="value text-success">Rp<?= number_format($data['total_price'], 0, ',', '.') ?></div>
+        <div class="row">
+            <div class="label">Keberangkatan</div>
+            <div class="value"><?= $tiket['tanggal_berangkat'] ?> <?= $tiket['jam_berangkat'] ?></div>
         </div>
-        <div class="ticket-info">
-            <div class="label">No. Bangku:</div>
-            <div class="value text-primary fw-bold">A<?= $no_bangku ?></div>
+        <div class="row">
+            <div class="label">Tiba</div>
+            <div class="value"><?= $tiket['tanggal_tiba'] ?> <?= $tiket['jam_tiba'] ?></div>
         </div>
-        <hr>
-        <div class="print-btn text-center">
-            <button onclick="window.print()" class="btn btn-success">🖨️ Cetak Tiket</button>
-            <a href="admin/index.php" class="btn btn-secondary">🔙 Kembali</a>
+
+        <div class="qr-code">
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=TIKET<?= $tiket['id'] ?>" alt="QR Code">
+            <p style="margin-top: 5px;">Scan saat Membayar</p>
+        </div>
+
+        <div class="print-btn">
+            <button onclick="window.print()">Cetak E-Tiket</button>
         </div>
     </div>
+
+    <div class="footer">
+        Silakan tunjukkan e-tiket ini saat check-in di pelabuhan. Tiket hanya berlaku sesuai jadwal tertera.
+    </div>
+</div>
+
 </body>
 </html>
-<?php $conn->close(); ?>
